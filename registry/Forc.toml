@@ -1,0 +1,10 @@
+[project]
+authors = ["FuelName"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "registry"
+
+[dependencies]
+shared = { path = "../shared" }
+sway_libs = { git = "https://github.com/FuelLabs/sway-libs", tag = "v0.21.0" }
+standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.4.4" }

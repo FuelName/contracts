@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+  "./integration_tests",
+]
+
+[workspace.dependencies]
+fuels = "0.66.9"
+tokio = "1.40.0"
+rand = "0.8.5"
+chrono = "0.4.38"
+time = "0.3.36"

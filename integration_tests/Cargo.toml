@@ -1,0 +1,21 @@
+[package]
+name = "fuelname_contracts"
+description = "Integration tests for the fuelname contracts."
+version = "0.1.0"
+edition = "2021"
+authors = ["fuelnamedev@gmail.com"]
+license = "Apache-2.0"
+
+[dev-dependencies]
+fuels = { workspace = true, features = ["fuel-core-lib"] }
+tokio = { workspace = true, features = ["rt", "macros"] }
+rand = { workspace = true }
+chrono = { workspace = true }
+
+[[test]]
+harness = true
+name = "integration_tests"
+path = "tests/harness.rs"
+
+[dependencies]
+reqwest = "0.12.3"
