@@ -13,6 +13,9 @@ pub const MIN_GRACE_PERIOD_DURATION: u64 = 2592000; // 30 days
 pub const ONE_YEAR_SECONDS: u64 = 31622400;
 
 pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
+pub fn usdc_asset_id() -> AssetId {
+    AssetId::from_str("0x286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b").unwrap()
+}
 
 const REGISTRY_DEPLOYED_CONTRACT_ID: &str =
     "0x8e66c1787462dad4193ce687eab081adbcbced4b2cc4170f061285a4489855e7";
@@ -49,7 +52,21 @@ pub async fn get_wallets(on_chain: bool) -> (WalletUnlocked, WalletUnlocked) {
 
 async fn get_custom_wallets() -> (WalletUnlocked, WalletUnlocked) {
     let wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(2), Some(1_000_000_000)),
+        WalletsConfig::new_multiple_assets(
+            2,
+            vec![
+                AssetConfig {
+                    id: BASE_ASSET_ID,
+                    num_coins: 2,
+                    coin_amount: 1_000_000_000,
+                },
+                AssetConfig {
+                    id: usdc_asset_id(),
+                    num_coins: 2,
+                    coin_amount: 1_000_000_000,
+                }
+            ],
+        ),
         None,
         None,
     )
@@ -240,21 +257,40 @@ impl Fixture {
             .value
     }
 
-    pub async fn get_domain_price(&self, domain: &str, years: u64) -> u64 {
+    pub async fn get_domain_price(
+        &self,
+        domain: &str,
+        years: u64,
+        asset: &AssetId,
+    ) -> u64 {
         self.registrar_contract
             .methods()
-            .domain_price(domain.to_string(), years)
+            .domain_price(domain.to_string(), years, *asset)
             .simulate(Execution::StateReadOnly)
             .await
             .unwrap()
             .value
     }
 
-    pub async fn mint_domain(
+    pub async fn remove_fee_asset(
+        &self,
+        asset: &AssetId,
+    ) {
+        self.registrar_contract
+            .methods()
+            .remove_fee_asset(*asset)
+            .call()
+            .await
+            .unwrap()
+            .value
+    }
+
+    pub async fn _mint_domain(
         &self,
         domain: &str,
         years: u64,
         fee_to_transfer: u64,
+        asset: Option<AssetId>,
     ) -> Result<AssetId> {
         let tx_policies = TxPolicies::default()
             .with_script_gas_limit(1_000_000);
@@ -269,7 +305,7 @@ impl Fixture {
             .call_params(
                 CallParameters::default()
                     .with_amount(fee_to_transfer)
-                    .with_asset_id(BASE_ASSET_ID),
+                    .with_asset_id(asset.unwrap_or(BASE_ASSET_ID)),
             )
             .unwrap()
             .with_contracts(&[&self.registry_contract])
@@ -353,7 +389,7 @@ impl Fixture {
             .value;
         self.registry_contract
             .clone()
-            .with_account(self.deployer.clone())
+            .with_account(self.user.clone())
             .methods()
             .set_primary(asset_id)
             .with_contracts(&[&self.resolver_contract])
@@ -401,13 +437,14 @@ impl Fixture {
 
     pub async fn set_fees(
         &self,
+        asset: &AssetId,
         three_letter_fee: u64,
         four_letter_fee: u64,
         long_domain_fee: u64,
     ) {
         self.registrar_contract
             .methods()
-            .set_fees(three_letter_fee, four_letter_fee, long_domain_fee)
+            .set_fees(*asset, three_letter_fee, four_letter_fee, long_domain_fee)
             .call()
             .await
             .unwrap();

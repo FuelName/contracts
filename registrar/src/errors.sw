@@ -4,6 +4,7 @@ pub enum ValidationError {
     InvalidDomainName: (),
     InvalidPeriod: (),
     WrongFeeAmount: (),
+    WrongFeeAsset: (),
 }
 
 pub enum GracePeriodError {
