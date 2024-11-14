@@ -7,4 +7,4 @@ name = "registry"
 [dependencies]
 shared = { path = "../shared" }
 sway_libs = { git = "https://github.com/FuelLabs/sway-libs", tag = "v0.21.0" }
-standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.4.4" }
+standards = { git = "https://github.com/FuelLabs/sway-standards", tag = "v0.6.1" }

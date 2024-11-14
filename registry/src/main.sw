@@ -5,8 +5,14 @@ mod errors;
 
 use ::errors::{AssetError, ValidationError, UnexpectedError, MintError, OwnershipError, RenewalError, ResolutionError};
 use shared::{BaseDomainResolver, DomainRegistry, is_asset_owner};
-use standards::src20::SRC20;
-use standards::src7::{Metadata, SRC7};
+use standards::src20::{
+    SetDecimalsEvent,
+    SetNameEvent,
+    SetSymbolEvent,
+    SRC20,
+    TotalSupplyEvent,
+};
+use standards::src7::{Metadata, SRC7, SetMetadataEvent};
 use sway_libs::asset::{
     base::{
         _name,
@@ -151,22 +157,46 @@ fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, g
     storage.total_assets.write(total_assets + 1);
     mint_to(recipient, sub_id, 1);
     set_token_metadata(asset_id, full_name, expiration, grace_period, resolver);
+    let sender = Identity::ContractId(ContractId::this());
+    SetNameEvent::new(asset_id, Some(String::from_ascii_str("Fuelname")), sender).log();
+    SetSymbolEvent::new(asset_id, Some(String::from_ascii_str("FNS")), sender).log();
+    SetDecimalsEvent::new(asset_id, 0, sender).log();
+    TotalSupplyEvent::new(asset_id, 1, sender).log();
     asset_id
 }
 
 #[storage(read, write)]
 fn set_token_metadata(asset: AssetId, full_name: String, expiration: Option<u64>,  grace_period: Option<u64>, resolver: Option<ContractId>) {
-    _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(DOMAIN_NAME_KEY)), Metadata::String(full_name));
+    let sender = Identity::ContractId(ContractId::this());
+    let domain_key = String::from_ascii_str(from_str_array(DOMAIN_NAME_KEY));
+    let domain_metadata = Metadata::String(full_name);
+    _set_metadata(storage.metadata, asset, domain_key, domain_metadata);
+    SetMetadataEvent::new(asset, Some(domain_metadata), domain_key, sender).log();
     match expiration {
-        Some(exp) => _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(EXPIRATION_KEY)), Metadata::Int(exp)),
+        Some(exp) => {
+            let key = String::from_ascii_str(from_str_array(EXPIRATION_KEY));
+            let value = Metadata::Int(exp);
+            _set_metadata(storage.metadata, asset, key, value);
+            SetMetadataEvent::new(asset, Some(value), key, sender).log();
+        },
         None => {},
     }
     match grace_period {
-        Some(gp) => _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(GRACE_PERIOD_KEY)), Metadata::Int(gp)),
+        Some(gp) => {
+            let key = String::from_ascii_str(from_str_array(GRACE_PERIOD_KEY));
+            let value = Metadata::Int(gp);
+            _set_metadata(storage.metadata, asset, key, value);
+            SetMetadataEvent::new(asset, Some(value), key, sender).log();
+        },
         None => {},
     }
     match resolver {
-        Some(rslvr) => _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(RESOLVER_KEY)), Metadata::B256(rslvr.into())),
+        Some(rslvr) => {
+            let key = String::from_ascii_str(from_str_array(RESOLVER_KEY));
+            let value = Metadata::B256(rslvr.into());
+            _set_metadata(storage.metadata, asset, key, value);
+            SetMetadataEvent::new(asset, Some(value), key, sender).log();
+        },
         None => {},
     }
 }
@@ -275,7 +305,11 @@ impl DomainRegistry for Contract {
             Some(Metadata::Int(exp)) => require(expiration > exp, RenewalError::InvalidExpirationValue),
             _ => (),
         };
-        _set_metadata(storage.metadata, asset_id, String::from_ascii_str(from_str_array(EXPIRATION_KEY)), Metadata::Int(expiration));
+        let key = String::from_ascii_str(from_str_array(EXPIRATION_KEY));
+        let value = Metadata::Int(expiration);
+        let sender = Identity::ContractId(ContractId::this());
+        _set_metadata(storage.metadata, asset_id, key, value);
+        SetMetadataEvent::new(asset_id, Some(value), key, sender).log();
     }
 
     #[storage(read)]
@@ -306,7 +340,11 @@ impl DomainRegistry for Contract {
         let (_, asset) = domain_to_asset_id(domain); 
         require(is_asset_owner(asset), OwnershipError::NotDomainOwner);
         require(asset_exists(asset), AssetError::AssetDoesNotExist);
-        _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(RESOLVER_KEY)), Metadata::B256(resolver.into()));
+        let key = String::from_ascii_str(from_str_array(RESOLVER_KEY));
+        let value = Metadata::B256(resolver.into());
+        let sender = Identity::ContractId(ContractId::this());
+        _set_metadata(storage.metadata, asset, key, value);
+        SetMetadataEvent::new(asset, Some(value), key, sender).log();
     }
 
     #[storage(read, write)]
