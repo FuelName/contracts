@@ -157,7 +157,7 @@ fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, g
     storage.total_assets.write(total_assets + 1);
     mint_to(recipient, sub_id, 1);
     set_token_metadata(asset_id, full_name, expiration, grace_period, resolver);
-    let sender = Identity::ContractId(ContractId::this());
+    let sender = msg_sender().unwrap();
     SetNameEvent::new(asset_id, Some(String::from_ascii_str("Fuelname")), sender).log();
     SetSymbolEvent::new(asset_id, Some(String::from_ascii_str("FNS")), sender).log();
     SetDecimalsEvent::new(asset_id, 0, sender).log();
@@ -165,37 +165,32 @@ fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, g
     asset_id
 }
 
+#[storage(write)]
+fn update_metadata<S>(asset: AssetId, key: S, value: Metadata) {
+    let sender = msg_sender().unwrap();
+    let k = String::from_ascii_str(from_str_array(key));
+    _set_metadata(storage.metadata, asset, k, value);
+    SetMetadataEvent::new(asset, Some(value), k, sender).log();
+}
+
 #[storage(read, write)]
 fn set_token_metadata(asset: AssetId, full_name: String, expiration: Option<u64>,  grace_period: Option<u64>, resolver: Option<ContractId>) {
-    let sender = Identity::ContractId(ContractId::this());
-    let domain_key = String::from_ascii_str(from_str_array(DOMAIN_NAME_KEY));
-    let domain_metadata = Metadata::String(full_name);
-    _set_metadata(storage.metadata, asset, domain_key, domain_metadata);
-    SetMetadataEvent::new(asset, Some(domain_metadata), domain_key, sender).log();
+    update_metadata(asset, DOMAIN_NAME_KEY, Metadata::String(full_name));
     match expiration {
         Some(exp) => {
-            let key = String::from_ascii_str(from_str_array(EXPIRATION_KEY));
-            let value = Metadata::Int(exp);
-            _set_metadata(storage.metadata, asset, key, value);
-            SetMetadataEvent::new(asset, Some(value), key, sender).log();
+            update_metadata(asset, EXPIRATION_KEY, Metadata::Int(exp));
         },
         None => {},
     }
     match grace_period {
         Some(gp) => {
-            let key = String::from_ascii_str(from_str_array(GRACE_PERIOD_KEY));
-            let value = Metadata::Int(gp);
-            _set_metadata(storage.metadata, asset, key, value);
-            SetMetadataEvent::new(asset, Some(value), key, sender).log();
+            update_metadata(asset, GRACE_PERIOD_KEY, Metadata::Int(gp));
         },
         None => {},
     }
     match resolver {
         Some(rslvr) => {
-            let key = String::from_ascii_str(from_str_array(RESOLVER_KEY));
-            let value = Metadata::B256(rslvr.into());
-            _set_metadata(storage.metadata, asset, key, value);
-            SetMetadataEvent::new(asset, Some(value), key, sender).log();
+            update_metadata(asset, RESOLVER_KEY, Metadata::B256(rslvr.into()));
         },
         None => {},
     }
@@ -305,11 +300,7 @@ impl DomainRegistry for Contract {
             Some(Metadata::Int(exp)) => require(expiration > exp, RenewalError::InvalidExpirationValue),
             _ => (),
         };
-        let key = String::from_ascii_str(from_str_array(EXPIRATION_KEY));
-        let value = Metadata::Int(expiration);
-        let sender = Identity::ContractId(ContractId::this());
-        _set_metadata(storage.metadata, asset_id, key, value);
-        SetMetadataEvent::new(asset_id, Some(value), key, sender).log();
+        update_metadata(asset_id, EXPIRATION_KEY, Metadata::Int(expiration));
     }
 
     #[storage(read)]
@@ -340,11 +331,7 @@ impl DomainRegistry for Contract {
         let (_, asset) = domain_to_asset_id(domain); 
         require(is_asset_owner(asset), OwnershipError::NotDomainOwner);
         require(asset_exists(asset), AssetError::AssetDoesNotExist);
-        let key = String::from_ascii_str(from_str_array(RESOLVER_KEY));
-        let value = Metadata::B256(resolver.into());
-        let sender = Identity::ContractId(ContractId::this());
-        _set_metadata(storage.metadata, asset, key, value);
-        SetMetadataEvent::new(asset, Some(value), key, sender).log();
+        update_metadata(asset, RESOLVER_KEY, Metadata::B256(resolver.into()));
     }
 
     #[storage(read, write)]
