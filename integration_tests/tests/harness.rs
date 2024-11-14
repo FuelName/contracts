@@ -54,15 +54,26 @@ async fn mint_reserved_domains() {
     let fixture = connect_to_deployed_contracts().await;
     let reserved_domains = vec!["wallet", "fuelnameservice", "fns", "fueldomains", "domains", "thunder", "spark", "swaylend", "bsafe", "sway", "fuel", "fuelnetwork"];
     for domain in reserved_domains {
-        let asset = fixture.mint_domain(domain, 3, 0).await.unwrap();
+        let asset = fixture._mint_domain(domain, 3, 0, None).await.unwrap();
         println!("{}: {}", domain, asset);
     }
 }
 
 mod tests {
     use rand::random;
-
+    use crate::utils::{usdc_asset_id, Fixture};
     use super::*;
+
+    impl Fixture {
+        async fn mint_domain(
+            &self,
+            domain: &str,
+            years: u64,
+            fee_to_transfer: u64,
+        ) -> Result<AssetId> {
+            self._mint_domain(domain, years, fee_to_transfer, None).await
+        }
+    }
 
     #[tokio::test]
     async fn test_high_level_domain() {
@@ -243,7 +254,7 @@ mod tests {
         let balance_before = fixture.deployer.get_asset_balance(&BASE_ASSET_ID).await.unwrap();
         fixture.withdraw_funds().await;
         let balance_after = fixture.deployer.get_asset_balance(&BASE_ASSET_ID).await.unwrap();
-        assert_eq!(balance_after - balance_before, COMMON_DEFAULT_FEE * 5);
+        assert_eq!(balance_after - balance_before, COMMON_DEFAULT_FEE * 5 - 1);
     }
 
     #[tokio::test]
@@ -275,20 +286,20 @@ mod tests {
         let updated_three_letter_fee = 1000;
         let updated_four_letter_fee = 100;
         let updated_common_fee = 10;
-
-        assert_eq!(fixture.get_domain_price("fue", 1).await, THREE_LETTER_ANNUAL_DEFAULT_FEE);
-        assert_eq!(fixture.get_domain_price("fuel", 1).await, FOUR_LETTER_ANNUAL_DEFAULT_FEE);
-        assert_eq!(fixture.get_domain_price("fuelet", 1).await, COMMON_ANNUAL_DEFAULT_FEE);
+        let asset_id = &BASE_ASSET_ID;
+        assert_eq!(fixture.get_domain_price("fue", 1, asset_id).await, THREE_LETTER_ANNUAL_DEFAULT_FEE);
+        assert_eq!(fixture.get_domain_price("fuel", 1, asset_id).await, FOUR_LETTER_ANNUAL_DEFAULT_FEE);
+        assert_eq!(fixture.get_domain_price("fuelet", 1, asset_id).await, COMMON_ANNUAL_DEFAULT_FEE);
 
         fixture.mint_domain("fue", 1, THREE_LETTER_ANNUAL_DEFAULT_FEE).await.unwrap();
         fixture.mint_domain("fuel", 1, FOUR_LETTER_ANNUAL_DEFAULT_FEE).await.unwrap();
         fixture.mint_domain("fuelet", 1, COMMON_ANNUAL_DEFAULT_FEE).await.unwrap();
 
-        fixture.set_fees(updated_three_letter_fee, updated_four_letter_fee, updated_common_fee).await;
+        fixture.set_fees(asset_id, updated_three_letter_fee, updated_four_letter_fee, updated_common_fee).await;
 
-        assert_eq!(fixture.get_domain_price("fue", 1).await, updated_three_letter_fee);
-        assert_eq!(fixture.get_domain_price("fuel", 1).await, updated_four_letter_fee);
-        assert_eq!(fixture.get_domain_price("fuelet", 1).await, updated_common_fee);
+        assert_eq!(fixture.get_domain_price("fue", 1, asset_id).await, updated_three_letter_fee);
+        assert_eq!(fixture.get_domain_price("fuel", 1, asset_id).await, updated_four_letter_fee);
+        assert_eq!(fixture.get_domain_price("fuelet", 1, asset_id).await, updated_common_fee);
 
         fixture.mint_domain("euf", 1, updated_three_letter_fee).await.unwrap();
         fixture.mint_domain("leuf", 1, updated_four_letter_fee).await.unwrap();
@@ -486,5 +497,50 @@ mod tests {
         let fixture = setup(false).await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.renew_domain(SUB_DOMAIN_1, 1, COMMON_DEFAULT_FEE).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "WrongFeeAsset")]
+    async fn test_wrong_asset_get_price() {
+        let fixture = setup(false).await;
+        fixture.get_domain_price(SUB_DOMAIN_PART_1, 1, &usdc_asset_id()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "WrongFeeAsset")]
+    async fn test_wrong_asset_payment() {
+        let fixture = setup(false).await;
+        fixture._mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE, Some(usdc_asset_id())).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_different_asset_payment() {
+        let fixture = setup(false).await;
+        fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
+        let price = fixture.get_domain_price(SUB_DOMAIN_PART_1, 1, &usdc_asset_id()).await;
+        let balance = fixture.user.get_asset_balance(&usdc_asset_id()).await.unwrap();
+        assert_eq!(price, 10);
+        fixture._mint_domain(SUB_DOMAIN_PART_1, 1, 10, Some(usdc_asset_id())).await.unwrap();
+        let updated_balance = fixture.user.get_asset_balance(&usdc_asset_id()).await.unwrap();
+        assert_eq!(updated_balance, balance - 10);
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "WrongFeeAmount")]
+    async fn test_wrong_fee_amount() {
+        let fixture = setup(false).await;
+        fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
+        let price = fixture.get_domain_price(SUB_DOMAIN_PART_1, 1, &usdc_asset_id()).await;
+        assert_eq!(price, 10);
+        fixture._mint_domain(SUB_DOMAIN_PART_1, 1, 11, Some(usdc_asset_id())).await.unwrap();
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "WrongFeeAsset")]
+    async fn test_remove_fee_asset() {
+        let fixture = setup(false).await;
+        fixture.remove_fee_asset(&BASE_ASSET_ID).await;
+        assert!(fixture.mint_domain(SUB_DOMAIN_PART_2, 1, COMMON_DEFAULT_FEE).await.is_err());
+        fixture.get_domain_price(SUB_DOMAIN_PART_2, 1, &BASE_ASSET_ID).await;
     }
 }
