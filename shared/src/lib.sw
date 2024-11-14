@@ -67,7 +67,7 @@ abi DomainRegistrar {
     fn initialize();
 
     #[storage(read)]
-    fn domain_price(domain: String, years: u64) -> u64;
+    fn domain_price(domain: String, years: u64, asset: AssetId) -> u64;
 
     #[payable]
     #[storage(read)]
@@ -78,7 +78,7 @@ abi DomainRegistrar {
     fn renew_domain(domain: String, years: u64);
 
     #[storage(read, write)]
-    fn set_fees(three_letter_fee: u64, four_letter_fee: u64, long_domain_fee: u64);
+    fn set_fees(asset: AssetId, three_letter_fee: u64, four_letter_fee: u64, long_domain_fee: u64);
 
     #[storage(read, write)]
     fn set_grace_period(grace_period: u64);
@@ -88,6 +88,9 @@ abi DomainRegistrar {
 
     #[storage(read)]
     fn withdraw_funds();
+
+    #[storage(write)]
+    fn remove_fee_asset(asset: AssetId);
 }
 
 // TODO: make sure the logic is correct and cannot be frauded
