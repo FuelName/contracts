@@ -6,4 +6,4 @@ name = "registrar"
 
 [dependencies]
 shared = { path = "../shared" }
-sway_libs = { git = "https://github.com/FuelLabs/sway-libs", tag = "v0.21.0" }
+sway_libs = { git = "https://github.com/FuelLabs/sway-libs", tag = "v0.24.0" }
