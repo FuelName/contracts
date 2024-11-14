@@ -7,7 +7,7 @@ use standards::src14::{SRC14, SRC14_TARGET_STORAGE, SRC14Extension};
 
 abi OwnershipOps {
     #[storage(read, write)]
-    fn initialize_proxy();
+    fn initialize_proxy_ownership();
 
     #[storage(read, write)]
     fn transfer_proxy_ownership(new_owner: Identity);
@@ -61,7 +61,7 @@ impl SRC14Extension for Contract {
 
 impl OwnershipOps for Contract {
     #[storage(read, write)]
-    fn initialize_proxy() {
+    fn initialize_proxy_ownership() {
         require(
             storage::SRC14
                 .owner
