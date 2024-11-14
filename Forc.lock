@@ -1,6 +1,16 @@
 [[package]]
 name = "core"
-source = "path+from-root-EF1196EF955CE54B"
+source = "path+from-root-F64B6E1A883A7E7B"
+
+[[package]]
+name = "proxy"
+source = "member"
+dependencies = [
+    "shared",
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.1#792639cdf391565e6e6a02482ea8a46d9604a6f5",
+    "std",
+    "sway_libs",
+]
 
 [[package]]
 name = "registrar"
@@ -36,7 +46,7 @@ dependencies = ["std"]
 
 [[package]]
 name = "standards"
-source = "git+https://github.com/FuelLabs/sway-standards?tag=v0.4.3#6f63eb7dff2458a7d976184e565b5cbf26f61da2"
+source = "git+https://github.com/FuelLabs/sway-standards?tag=v0.6.0#65e09f95ea8b9476b171a66c8a47108f352fa32c"
 dependencies = ["std"]
 
 [[package]]
@@ -46,13 +56,13 @@ dependencies = ["std"]
 
 [[package]]
 name = "std"
-source = "git+https://github.com/fuellabs/sway?tag=v0.63.3#f55c81cce61aac31913ac0e87306cbaed7da679a"
+source = "git+https://github.com/fuellabs/sway?tag=v0.66.4#d7dd104dac4394aa7af56f05b720c975744db853"
 dependencies = ["core"]
 
 [[package]]
 name = "sway_libs"
-source = "git+https://github.com/FuelLabs/sway-libs?tag=v0.21.0#6a227ed34c86fe1ebd334dbdfeccf66c43e3915b"
+source = "git+https://github.com/FuelLabs/sway-libs?tag=v0.24.0#e19f96f85ae12426d20adc176b70aa38fd9a2a5b"
 dependencies = [
-    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.4.3#6f63eb7dff2458a7d976184e565b5cbf26f61da2",
+    "standards git+https://github.com/FuelLabs/sway-standards?tag=v0.6.0#65e09f95ea8b9476b171a66c8a47108f352fa32c",
     "std",
 ]

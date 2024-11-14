@@ -3,5 +3,6 @@ members = [
     "./registry",
     "./registrar",
     "./resolver",
+    "./proxy",
     "./shared",
 ]

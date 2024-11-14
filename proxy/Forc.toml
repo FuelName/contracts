@@ -2,7 +2,7 @@
 authors = ["FuelName"]
 entry = "main.sw"
 license = "Apache-2.0"
-name = "registry"
+name = "proxy"
 
 [dependencies]
 shared = { path = "../shared" }

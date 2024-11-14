@@ -7,13 +7,23 @@ use ::errors::GracePeriodError;
 use ::errors::DomainRenewalError;
 
 use shared::{DomainRegistrar, DomainRegistry};
-use std::{constants::ZERO_B256, call_frames::{msg_asset_id}, string::String, outputs::{Output, output_type, output_count, output_amount, output_asset_id, output_asset_to}, block::timestamp, context::msg_amount, asset::transfer, context::this_balance};
+use std::{hash::Hash, constants::ZERO_B256, call_frames::{msg_asset_id}, string::String, outputs::{Output, output_type, output_count, output_amount, output_asset_id, output_asset_to}, block::timestamp, context::msg_amount, asset::transfer, context::this_balance};
 use sway_libs::ownership::*;
+
+struct Fees {
+    three_letter_annual_fee: u64,
+    four_letter_annual_fee: u64,
+    long_domain_annual_fee: u64,
+}
 
 configurable {
     REGISTRY_CONTRACT_ID: ContractId = ContractId::from(ZERO_B256),
     DEFAULT_RESOLVER_CONTRACT_ID: ContractId = ContractId::from(ZERO_B256),
-
+    ETH_FEES: Fees = Fees {
+        three_letter_annual_fee: 50000000,
+        four_letter_annual_fee: 10000000,
+        long_domain_annual_fee: 1000000,
+    },
     RESERVER_ADDRESS: b256 = 0xaebc5eac48e2d83bfaae60f9d674ac3f1e7f5dd51f1c102adfa04edda7be7e31,
 }
 
@@ -22,44 +32,37 @@ const MIN_GRACE_PERIOD_DURATION = 2592000; // 30 days
 const ROOT_DOMAIN: str[4] = __to_str_array("fuel");
 
 storage {
-    three_letter_annual_fee: u64 = 50000000,
-    four_letter_annual_fee: u64  = 10000000,
-    long_domain_annual_fee: u64  = 1000000,
     grace_period_duration: u64 = MIN_GRACE_PERIOD_DURATION,
+    pricing: StorageMap<AssetId, Fees> = StorageMap {},
 }
 
 #[storage(read)]
-fn get_domain_price(domain: String, years: u64) -> u64 {
+fn get_domain_price(asset: AssetId, domain: String, years: u64) -> u64 {
     if msg_sender().unwrap() == Identity::Address(Address::from(RESERVER_ADDRESS)) {
         return 0;
     }
     let length = domain.as_bytes().len();
     require(length >= 3, ValidationError::InvalidDomainName); // TODO: duplication of string_utils. Move to a shared module
     require(years > 0 && years <= 3, ValidationError::InvalidPeriod);
+    let fees = storage.pricing.get(asset).try_read();
+    require(fees.is_some(), ValidationError::WrongFeeAsset);
+    let fees = fees.unwrap();
     let annual_fee = if length == 3 {
-        storage.three_letter_annual_fee.read()
+        fees.three_letter_annual_fee
     } else if length == 4 {
-        storage.four_letter_annual_fee.read()
+        fees.four_letter_annual_fee
     } else {
-        storage.long_domain_annual_fee.read()
+        fees.long_domain_annual_fee
     };
     annual_fee * years
 }
 
 #[storage(read)]
 fn check_domain_payment(name: String, years: u64) {
-    let price = get_domain_price(name, years);
-    let paid = get_transferred_eth_amount();
+    let asset_id = msg_asset_id();
+    let price = get_domain_price(asset_id, name, years);
+    let paid = msg_amount();
     require(price == paid, ValidationError::WrongFeeAmount);
-}
-
-fn get_transferred_eth_amount() -> u64 {
-    // TODO: replace base asset with eth asset id? In case base changes
-    if msg_asset_id() == AssetId::base() {
-        msg_amount()
-    } else {
-        0
-    }
 }
 
 fn years_from_now_ts(years: u64) -> u64 {
@@ -73,11 +76,12 @@ impl DomainRegistrar for Contract {
     fn initialize() {
         let sender = msg_sender().unwrap();
         initialize_ownership(sender);
+        storage.pricing.insert(AssetId::base(), ETH_FEES);
     }
 
     #[storage(read)]
-    fn domain_price(domain: String, years: u64) -> u64 {
-        get_domain_price(domain, years)
+    fn domain_price(domain: String, years: u64, asset: AssetId) -> u64 {
+        get_domain_price(asset, domain, years)
     }
 
     #[payable]
@@ -118,11 +122,14 @@ impl DomainRegistrar for Contract {
     }
 
     #[storage(read, write)]
-    fn set_fees(three_letter_fee: u64, four_letter_fee: u64, long_domain_fee: u64) {
+    fn set_fees(asset: AssetId, three_letter_fee: u64, four_letter_fee: u64, long_domain_fee: u64) {
         only_owner();
-        storage.three_letter_annual_fee.write(three_letter_fee);
-        storage.four_letter_annual_fee.write(four_letter_fee);
-        storage.long_domain_annual_fee.write(long_domain_fee);
+        let fees = Fees {
+            three_letter_annual_fee: three_letter_fee,
+            four_letter_annual_fee: four_letter_fee,
+            long_domain_annual_fee: long_domain_fee,
+        };
+        storage.pricing.insert(asset, fees);
     }
 
     #[storage(read, write)]
@@ -144,5 +151,12 @@ impl DomainRegistrar for Contract {
         let sender = msg_sender().unwrap();
         let balance = this_balance(AssetId::base());
         transfer(sender, AssetId::base(), balance);
+    }
+
+    #[storage(write)]
+    fn remove_fee_asset(asset: AssetId) {
+        only_owner();
+        let removed = storage.pricing.remove(asset);
+        require(removed, ValidationError::WrongFeeAsset);
     }
 }
