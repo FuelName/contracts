@@ -7,13 +7,13 @@ use standards::src14::{SRC14, SRC14_TARGET_STORAGE, SRC14Extension};
 
 abi OwnershipOps {
     #[storage(read, write)]
-    fn initialize();
+    fn initialize_proxy();
 
     #[storage(read, write)]
-    fn transfer_ownership(new_owner: Identity);
+    fn transfer_proxy_ownership(new_owner: Identity);
 
     #[storage(read, write)]
-    fn renounce_ownership();
+    fn renounce_proxy_ownership();
 }
 
 struct TargetChangedEvent {
@@ -61,7 +61,7 @@ impl SRC14Extension for Contract {
 
 impl OwnershipOps for Contract {
     #[storage(read, write)]
-    fn initialize() {
+    fn initialize_proxy() {
         require(
             storage::SRC14
                 .owner
@@ -77,7 +77,7 @@ impl OwnershipOps for Contract {
     }
 
     #[storage(read, write)]
-    fn transfer_ownership(new_owner: Identity) {
+    fn transfer_proxy_ownership(new_owner: Identity) {
         only_owner();
         storage::SRC14.owner.write(State::Initialized(new_owner));
         log(OwnershipTransferred {
@@ -87,7 +87,7 @@ impl OwnershipOps for Contract {
     }
 
     #[storage(read, write)]
-    fn renounce_ownership() {
+    fn renounce_proxy_ownership() {
         only_owner();
         storage::SRC14.owner.write(State::Revoked);
         log(OwnershipRenounced {
