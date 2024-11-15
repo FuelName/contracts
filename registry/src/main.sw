@@ -5,7 +5,13 @@ mod errors;
 
 use ::errors::{AssetError, ValidationError, UnexpectedError, MintError, OwnershipError, RenewalError, ResolutionError};
 use shared::{BaseDomainResolver, DomainRegistry, is_asset_owner};
-use standards::src20::SRC20;
+use standards::src20::{
+    SetDecimalsEvent,
+    SetNameEvent,
+    SetSymbolEvent,
+    SRC20,
+    TotalSupplyEvent,
+};
 use standards::src7::{Metadata, SRC7};
 use sway_libs::asset::{
     base::{
@@ -151,6 +157,11 @@ fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, g
     storage.total_assets.write(total_assets + 1);
     mint_to(recipient, sub_id, 1);
     set_token_metadata(asset_id, full_name, expiration, grace_period, resolver);
+    let sender = msg_sender().unwrap();
+    SetNameEvent::new(asset_id, Some(String::from_ascii_str("Fuelname")), sender).log();
+    SetSymbolEvent::new(asset_id, Some(String::from_ascii_str("FNS")), sender).log();
+    SetDecimalsEvent::new(asset_id, 0, sender).log();
+    TotalSupplyEvent::new(asset_id, 1, sender).log();
     asset_id
 }
 
