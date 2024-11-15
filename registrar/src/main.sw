@@ -10,6 +10,19 @@ use shared::{DomainRegistrar, DomainRegistry};
 use std::{hash::Hash, constants::ZERO_B256, call_frames::{msg_asset_id}, string::String, outputs::{Output, output_type, output_count, output_amount, output_asset_id, output_asset_to}, block::timestamp, context::msg_amount, asset::transfer, context::this_balance};
 use sway_libs::ownership::*;
 
+struct SetFeesEvent {
+    asset_id: AssetId,
+    fees: Fees,
+}
+
+struct RemoveFeeAssetEvent {
+    asset_id: AssetId,
+}
+
+struct SetGracePeriodEvent {
+    duration: u64,
+}
+
 struct Fees {
     three_letter_annual_fee: u64,
     four_letter_annual_fee: u64,
@@ -77,6 +90,12 @@ impl DomainRegistrar for Contract {
         let sender = msg_sender().unwrap();
         initialize_ownership(sender);
         storage.pricing.insert(AssetId::base(), ETH_FEES);
+        log(
+            SetFeesEvent {
+                asset_id: AssetId::base(),
+                fees: ETH_FEES 
+            }
+        );
     }
 
     #[storage(read)]
@@ -130,6 +149,12 @@ impl DomainRegistrar for Contract {
             long_domain_annual_fee: long_domain_fee,
         };
         storage.pricing.insert(asset, fees);
+        log(
+            SetFeesEvent {
+                asset_id: asset,
+                fees 
+            }
+        );
     }
 
     #[storage(read, write)]
@@ -137,6 +162,11 @@ impl DomainRegistrar for Contract {
         only_owner();
         require(grace_period_duration >= MIN_GRACE_PERIOD_DURATION, GracePeriodError::InvalidGracePeriodDuration);
         storage.grace_period_duration.write(grace_period_duration);
+        log(
+            SetGracePeriodEvent {
+                duration: grace_period_duration
+            }
+        );
     }
 
     #[storage(read)]
@@ -158,5 +188,10 @@ impl DomainRegistrar for Contract {
         only_owner();
         let removed = storage.pricing.remove(asset);
         require(removed, ValidationError::WrongFeeAsset);
+        log(
+            RemoveFeeAssetEvent {
+                asset_id: asset
+            }
+        );
     }
 }

@@ -25,6 +25,11 @@ use std::{hash::{Hash, sha256}, storage::storage_string::*, string::String, asse
     }};
 use sway_libs::ownership::*;
 
+struct SetPrimaryEvent {
+    sender: Identity,
+    asset_id: AssetId,
+}
+
 const EXPIRATION_KEY: str[10] = __to_str_array("expiration");
 const DOMAIN_NAME_KEY: str[11] = __to_str_array("domain_name");
 const GRACE_PERIOD_KEY: str[12] = __to_str_array("grace_period");
@@ -314,6 +319,10 @@ impl DomainRegistry for Contract {
         let sender = msg_sender().unwrap(); 
         storage.primary_domains.insert(sender, asset);
         require(get_resolved_address(asset) == Some(sender), ResolutionError::CannotSetPrimaryForUnknownAddress);
+        log(SetPrimaryEvent {
+            sender,
+            asset_id: asset,
+        });
     }
 
     #[storage(read)]

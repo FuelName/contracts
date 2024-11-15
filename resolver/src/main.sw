@@ -7,6 +7,11 @@ use shared::{BaseDomainResolver, SimpleDomainResolver, is_asset_owner};
 use std::{constants::ZERO_B256, hash::Hash};
 use shared::DomainRegistry;
 
+struct SetAddressEvent {
+    asset: AssetId,
+    identity: Option<Identity>,
+}
+
 configurable {
     REGISTRY_CONTRACT_ID: ContractId = ContractId::from(ZERO_B256),
 }
@@ -47,5 +52,6 @@ impl SimpleDomainResolver for Contract {
         set_resolved_address(asset, resolve_to);
         // ! make sure that storage changes are rolled back properly 
         require(is_domain_active(asset), ExpirationError::ExpiredDomain);
+        log(SetAddressEvent { asset, identity: resolve_to });
     }
 }
