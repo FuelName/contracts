@@ -38,6 +38,7 @@ struct SetPrimaryEvent {
 
 const EXPIRATION_KEY: str[10] = __to_str_array("expiration");
 const DOMAIN_NAME_KEY: str[11] = __to_str_array("domain_name");
+const URI_KEY: str[3] = __to_str_array("uri");
 const GRACE_PERIOD_KEY: str[12] = __to_str_array("grace_period");
 const RESOLVER_KEY: str[8] = __to_str_array("resolver");
 
@@ -56,6 +57,7 @@ impl SRC20 for Contract {
 
     #[storage(read)]
     fn total_supply(asset: AssetId) -> Option<u64> {
+        // TODO: probably we should return this metadata and the meta below for expired domains as well
         if asset_exists(asset) {
             Some(1)
         } else {
@@ -94,15 +96,8 @@ impl SRC20 for Contract {
 impl SRC7 for Contract {
     #[storage(read)]
     fn metadata(asset: AssetId, key: String) -> Option<Metadata> {
-        match get_domain_name(asset) {
-            Some(domain) => {
-                if key == String::from_ascii_str("tokenURI") {
-                    return Some(Metadata::String(string_util::build_token_uri(domain)));
-                }
-                return None;
-            },
-            None => None,
-        }
+        // TODO: handle expired domains, point them to a different uri
+        storage.metadata.get(asset, key)
     }
 }
 
@@ -149,7 +144,6 @@ fn is_asset_active(asset: AssetId) -> bool {
     }
 }
 
-// TODO: provide the metadata url - pass URI from Registrar
 // TODO: https://docs.ens.domains/registry/eth#commit-reveal check if no attacks available on the mempool
 #[storage(read, write)]
 fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, grace_period: Option<u64>, resolver: Option<ContractId>) -> AssetId {
@@ -170,9 +164,11 @@ fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, g
     asset_id
 }
 
+// TODO: store generation as meta
 #[storage(read, write)]
 fn set_token_metadata(asset: AssetId, full_name: String, expiration: Option<u64>,  grace_period: Option<u64>, resolver: Option<ContractId>) {
     _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(DOMAIN_NAME_KEY)), Metadata::String(full_name));
+    _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(URI_KEY)), Metadata::String(string_util::build_token_uri(full_name)));
     match expiration {
         Some(exp) => _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(EXPIRATION_KEY)), Metadata::Int(exp)),
         None => {},
@@ -243,7 +239,6 @@ fn get_resolved_address(asset: AssetId) -> Option<Identity> {
 
 #[storage(read)]
 fn get_resolver_for_asset(asset_id: AssetId) -> Option<ContractId> {
-    // TODO: maybe we need to get resolver even if the domain is expired. To show legacy data
     if !asset_exists(asset_id) {
         return None;
     }
@@ -252,7 +247,6 @@ fn get_resolver_for_asset(asset_id: AssetId) -> Option<ContractId> {
         _ => None,
     }
 }
-
 
 impl DomainRegistry for Contract {
     #[storage(read, write)]
@@ -265,7 +259,6 @@ impl DomainRegistry for Contract {
     fn register_high_level_domain(recipient: Identity, name: String) -> AssetId {
         only_owner();
         validate_domain_name_part(name);
-        validate_domain_name(name);
         let minted_asset = mint_token(recipient, name, None, None, None);
         minted_asset
     }

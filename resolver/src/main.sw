@@ -40,7 +40,8 @@ fn is_domain_active(asset: AssetId) -> bool {
 impl BaseDomainResolver for Contract {
     #[storage(read)]
     fn resolve(asset: AssetId) -> Option<Identity> {
-        // can add the expiration check here but it would make transactions more expensive
+        // Expired domains should be handled by the registry.
+        // We can't enforce all resolvers to handle this
         storage.resolved_addresses.get(asset).try_read()
     }
 }
@@ -50,7 +51,6 @@ impl SimpleDomainResolver for Contract {
     fn set(asset: AssetId, resolve_to: Option<Identity>) {
         require(is_asset_owner(asset), OwnershipError::NotDomainOwner);
         set_resolved_address(asset, resolve_to);
-        // ! make sure that storage changes are rolled back properly 
         require(is_domain_active(asset), ExpirationError::ExpiredDomain);
         log(SetAddressEvent { asset, identity: resolve_to });
     }
