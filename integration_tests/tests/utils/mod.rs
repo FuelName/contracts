@@ -398,10 +398,10 @@ impl Fixture {
             .unwrap();
     }
 
-    pub async fn withdraw_funds(&self) {
+    pub async fn withdraw_funds(&self, asset_id: &AssetId) {
         self.registrar_contract
             .methods()
-            .withdraw_funds()
+            .withdraw_funds(*asset_id)
             .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await

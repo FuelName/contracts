@@ -87,7 +87,7 @@ abi DomainRegistrar {
     fn get_grace_period() -> u64;
 
     #[storage(read)]
-    fn withdraw_funds();
+    fn withdraw_funds(asset_id: AssetId);
 
     #[storage(write)]
     fn remove_fee_asset(asset: AssetId);
