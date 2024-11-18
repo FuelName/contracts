@@ -252,9 +252,22 @@ mod tests {
             fixture.mint_domain(&domain, 1, COMMON_DEFAULT_FEE).await.unwrap();
         }
         let balance_before = fixture.deployer.get_asset_balance(&BASE_ASSET_ID).await.unwrap();
-        fixture.withdraw_funds().await;
+        fixture.withdraw_funds(&BASE_ASSET_ID).await;
         let balance_after = fixture.deployer.get_asset_balance(&BASE_ASSET_ID).await.unwrap();
         assert_eq!(balance_after - balance_before, COMMON_DEFAULT_FEE * 5 - 1);
+    }
+
+    #[tokio::test]
+    async fn test_funds_withdrawal_other_assets() {
+        let fixture = setup(false).await;
+        fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
+        for domain in ["abcde", "1238172", "aaaaa", "fuelet", "000000"].iter() {
+            fixture._mint_domain(&domain, 1, 10, Some(usdc_asset_id())).await.unwrap();
+        }
+        let balance_before = fixture.deployer.get_asset_balance(&usdc_asset_id()).await.unwrap();
+        fixture.withdraw_funds(&usdc_asset_id()).await;
+        let balance_after = fixture.deployer.get_asset_balance(&usdc_asset_id()).await.unwrap();
+        assert_eq!(balance_after - balance_before, 10 * 5);
     }
 
     #[tokio::test]

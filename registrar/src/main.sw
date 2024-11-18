@@ -144,13 +144,12 @@ impl DomainRegistrar for Contract {
         storage.grace_period_duration.read()
     } 
 
-    // TODO: allow the NFT withdrawal
     #[storage(read)]
-    fn withdraw_funds() {
+    fn withdraw_funds(asset_id: AssetId) {
         only_owner();
         let sender = msg_sender().unwrap();
-        let balance = this_balance(AssetId::base());
-        transfer(sender, AssetId::base(), balance);
+        let balance = this_balance(asset_id);
+        transfer(sender, asset_id, balance);
     }
 
     #[storage(write)]
