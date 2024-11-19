@@ -14,12 +14,12 @@ runs:
         curl https://install.fuel.network | sh
         echo "$HOME/.fuelup/bin:${GITHUB_PATH}" >> $GITHUB_PATH
 
-    - name: Set default testnet toolchain
+    - name: Set default mainnet toolchain
       shell: bash
       run: |
         fuelup update
-        fuelup toolchain install testnet
-        fuelup default testnet
+        fuelup toolchain install mainnet
+        fuelup default mainnet
 
     - name: Build the contracts
       shell: bash
