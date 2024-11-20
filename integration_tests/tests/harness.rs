@@ -21,6 +21,8 @@ const COMMON_DEFAULT_FEE: u64 = COMMON_ANNUAL_DEFAULT_FEE;
 const THREE_LETTER_DEFAULT_FEE: u64 = THREE_LETTER_ANNUAL_DEFAULT_FEE;
 const FOUR_LETTER_DEFAULT_FEE: u64 = FOUR_LETTER_ANNUAL_DEFAULT_FEE;
 
+//TODO clean up
+
 #[ignore]
 #[tokio::test]
 // It's not a test but a deployment script. Just don't know where else to put it.

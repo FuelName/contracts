@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "./integration_tests",
+  "./deploy",
 ]
 
 [workspace.dependencies]
@@ -10,3 +11,5 @@ tokio = "1.40.0"
 rand = "0.8.5"
 chrono = "0.4.38"
 time = "0.3.36"
+dotenvy = "0.15.7"
+maplit = "1.0.2"

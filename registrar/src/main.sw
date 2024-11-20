@@ -86,7 +86,7 @@ fn years_from_now_ts(years: u64) -> u64 {
 
 impl DomainRegistrar for Contract {
     #[storage(read, write)]
-    fn initialize() {
+    fn initialize() -> Identity {
         let sender = msg_sender().unwrap();
         initialize_ownership(sender);
         storage.pricing.insert(AssetId::base(), ETH_FEES);
@@ -96,6 +96,7 @@ impl DomainRegistrar for Contract {
                 fees: ETH_FEES 
             }
         );
+        sender
     }
 
     #[storage(read)]

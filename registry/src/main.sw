@@ -256,9 +256,10 @@ fn get_resolver_for_asset(asset_id: AssetId) -> Option<ContractId> {
 
 impl DomainRegistry for Contract {
     #[storage(read, write)]
-    fn initialize() {
+    fn initialize() -> Identity {
         let sender = msg_sender().unwrap();
         initialize_ownership(sender);
+        sender
     }
 
     #[storage(read, write)]
