@@ -187,7 +187,7 @@ async fn deploy_with_proxy<F, R>(
     let id = _deploy(wallet, contract.name(), configurables).await;
     let proxy_id = match deploy_params {
         DeployParams::InitialDeploy => {
-            deploy_proxy_contract(wallet, id.clone()).await
+            deploy_proxy_contract(wallet, id.clone(), contract).await
         }
         DeployParams::Upgrade(proxies) => {
             let proxy_id = proxies.proxy_of(contract);
@@ -317,11 +317,13 @@ async fn deploy_registrar_contract(
 async fn deploy_proxy_contract(
     wallet: &WalletUnlocked,
     proxy_target: ContractId,
+    target_contract: &ContractType
 ) -> ContractId {
     let id = _deploy(wallet, "proxy", None).await;
     let proxy = Proxy::new(id.clone(), wallet.clone());
     proxy.methods().initialize_proxy_ownership().call().await.unwrap();
     proxy.methods().set_proxy_target(proxy_target).call().await.unwrap();
+    let owner = proxy.methods().proxy_owner().call().await.unwrap().value;
+    println!("{}-proxy owner: {:?}", target_contract.name(), owner);
     id
 }
-
