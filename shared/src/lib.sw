@@ -2,7 +2,6 @@ library;
 
 use std::{constants::ZERO_B256, context::balance_of, string::String, inputs::{Input, input_asset_id, input_count, input_coin_owner, input_type}};
 
-// TODO: add events (?)
 abi DomainRegistry {
     #[storage(read, write)]
     fn initialize() -> Identity;
@@ -93,10 +92,6 @@ abi DomainRegistrar {
     fn remove_fee_asset(asset: AssetId);
 }
 
-// TODO: make sure the logic is correct and cannot be frauded
-//  Can someone add an input to a transaction without owning it?
-//  See https://forum.fuel.network/t/does-coin-input-in-a-transaction-guarantee-that-it-was-added-by-the-input-owner/4363
-// TODO: think if we need to check if the asset was minted by the registry?
 pub fn is_asset_owner(asset_id: AssetId) -> bool {
     match msg_sender() {
         Ok(Identity::ContractId(contract_id)) => {

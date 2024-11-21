@@ -13,9 +13,9 @@ const ONE_YEAR_SECONDS: u64 = 31622400;
 
 const HIGH_LEVEL_DOMAIN: &str = "fuel";
 const SUB_DOMAIN_PART_1: &str = "fuelname";
-const SUB_DOMAIN_PART_2: &str = "fuelet";
+const SUB_DOMAIN_PART_2: &str = "domain";
 const SUB_DOMAIN_1: &str = "fuelname.fuel";
-const SUB_DOMAIN_2: &str = "fuelet.fuel";
+const SUB_DOMAIN_2: &str = "domain.fuel";
 const COMMON_DEFAULT_FEE: u64 = COMMON_ANNUAL_DEFAULT_FEE;
 const THREE_LETTER_DEFAULT_FEE: u64 = THREE_LETTER_ANNUAL_DEFAULT_FEE;
 const FOUR_LETTER_DEFAULT_FEE: u64 = FOUR_LETTER_ANNUAL_DEFAULT_FEE;
@@ -236,7 +236,7 @@ mod tests {
     #[tokio::test]
     async fn test_funds_withdrawal() {
         let fixture = setup().await;
-        for domain in ["abcde", "1238172", "aaaaa", "fuelet", "000000"].iter() {
+        for domain in ["abcde", "1238172", "aaaaa", "domain", "000000"].iter() {
             fixture.mint_domain(&domain, 1, COMMON_DEFAULT_FEE).await.unwrap();
         }
         let balance_before = fixture.deployer.get_asset_balance(&BASE_ASSET_ID).await.unwrap();
@@ -249,7 +249,7 @@ mod tests {
     async fn test_funds_withdrawal_other_assets() {
         let fixture = setup().await;
         fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
-        for domain in ["abcde", "1238172", "aaaaa", "fuelet", "000000"].iter() {
+        for domain in ["abcde", "1238172", "aaaaa", "domain", "000000"].iter() {
             fixture._mint_domain(&domain, 1, 10, Some(usdc_asset_id())).await.unwrap();
         }
         let balance_before = fixture.deployer.get_asset_balance(&usdc_asset_id()).await.unwrap();
@@ -290,17 +290,17 @@ mod tests {
         let asset_id = &BASE_ASSET_ID;
         assert_eq!(fixture.get_domain_price("fue", 1, asset_id).await, THREE_LETTER_ANNUAL_DEFAULT_FEE);
         assert_eq!(fixture.get_domain_price("fuel", 1, asset_id).await, FOUR_LETTER_ANNUAL_DEFAULT_FEE);
-        assert_eq!(fixture.get_domain_price("fuelet", 1, asset_id).await, COMMON_ANNUAL_DEFAULT_FEE);
+        assert_eq!(fixture.get_domain_price("domain", 1, asset_id).await, COMMON_ANNUAL_DEFAULT_FEE);
 
         fixture.mint_domain("fue", 1, THREE_LETTER_ANNUAL_DEFAULT_FEE).await.unwrap();
         fixture.mint_domain("fuel", 1, FOUR_LETTER_ANNUAL_DEFAULT_FEE).await.unwrap();
-        fixture.mint_domain("fuelet", 1, COMMON_ANNUAL_DEFAULT_FEE).await.unwrap();
+        fixture.mint_domain("domain", 1, COMMON_ANNUAL_DEFAULT_FEE).await.unwrap();
 
         fixture.set_fees(asset_id, updated_three_letter_fee, updated_four_letter_fee, updated_common_fee).await;
 
         assert_eq!(fixture.get_domain_price("fue", 1, asset_id).await, updated_three_letter_fee);
         assert_eq!(fixture.get_domain_price("fuel", 1, asset_id).await, updated_four_letter_fee);
-        assert_eq!(fixture.get_domain_price("fuelet", 1, asset_id).await, updated_common_fee);
+        assert_eq!(fixture.get_domain_price("domain", 1, asset_id).await, updated_common_fee);
 
         fixture.mint_domain("euf", 1, updated_three_letter_fee).await.unwrap();
         fixture.mint_domain("leuf", 1, updated_four_letter_fee).await.unwrap();

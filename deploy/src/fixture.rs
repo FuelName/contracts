@@ -321,15 +321,6 @@ impl Fixture {
             .transfer(to, 1, asset_id, TxPolicies::default())
             .await
             .unwrap();
-
-        // Send to Fuelet indexer
-        let url = format!(
-            "https://prod.api.fuelet.app/testnet/nft/73/mint/{}?domain={}&asset=0x{}",
-            to.to_string(),
-            domain,
-            asset_id.to_string()
-        );
-        reqwest::Client::new().post(url).send().await.unwrap();
     }
 
     pub async fn set_fees(
