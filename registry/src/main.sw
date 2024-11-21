@@ -259,6 +259,7 @@ impl DomainRegistry for Contract {
     fn register_high_level_domain(recipient: Identity, name: String) -> AssetId {
         only_owner();
         validate_domain_name_part(name);
+        validate_domain_name(name);
         let minted_asset = mint_token(recipient, name, None, None, None);
         minted_asset
     }

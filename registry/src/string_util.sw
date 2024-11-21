@@ -6,8 +6,8 @@ use std::primitive_conversions::u64::*;
 use std::logging::*;
 
 
-const MIN_DOMAIN_PART_LENGTH: u64 = 3;
-const MIN_DOMAIN_LENGTH: u64 = 7; // 123.fuel
+const MIN_DOMAIN_PART_LENGTH: u64 = 1;
+const MIN_DOMAIN_LENGTH: u64 = 3;
 const MAX_DOMAIN_LENGTH: u64 = 64;
 
 const DASH_SYMBOL_ASCII: u8 = 45;
@@ -140,9 +140,9 @@ fn test_valid_domains_are_allowed() {
     assert(domain_is_allowed(String::from_ascii_str("abcdefghijklmnopqrstuvwxyz")));
     assert(domain_is_allowed(String::from_ascii_str("0123456789")));
     assert(domain_is_allowed(String::from_ascii_str("abcdefghijklmnopqrstuvwxyz---0123456789")));
-    assert(domain_is_allowed(String::from_ascii_str("a-b-c.fuel")));
-    assert(domain_is_allowed(String::from_ascii_str("1-2-3.fuel")));
-    assert(domain_is_allowed(String::from_ascii_str("abc.fuel"))); // min len
+    assert(domain_is_allowed(String::from_ascii_str("a-b-c")));
+    assert(domain_is_allowed(String::from_ascii_str("1-2-3")));
+    assert(domain_is_allowed(String::from_ascii_str("abc"))); // min len
     assert(domain_is_allowed(String::from_ascii_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))); // max len
 }
 #[test]
@@ -178,9 +178,9 @@ fn test_starting_or_ending_with_dash_or_dot_domains_are_not_allowed() {
 }
 #[test]
 fn test_short_domain_parts() {
+    assert(domain_part_is_allowed(String::from_ascii_str("a")));
+    assert(domain_part_is_allowed(String::from_ascii_str("aa")));
     assert(domain_part_is_allowed(String::from_ascii_str("aaa")));
-    assert(domain_part_is_allowed(String::from_ascii_str("aaaa")));
-    assert(domain_part_is_allowed(String::from_ascii_str("aaaaa")));
 }
 #[test]
 fn test_dots_are_not_allowed_in_domain_parts() {
