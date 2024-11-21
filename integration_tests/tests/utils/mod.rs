@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
 use chrono::Duration;
-use fuels::{accounts::wallet::WalletUnlocked, prelude::*};
 use fuels::crypto::SecretKey;
 use fuels::types::Identity;
+use fuels::{accounts::wallet::WalletUnlocked, prelude::*};
 use rand::Rng;
 
 pub const THREE_LETTER_ANNUAL_DEFAULT_FEE: u64 = 50000000;
@@ -424,15 +424,6 @@ impl Fixture {
             .transfer(to, 1, asset_id, TxPolicies::default())
             .await
             .unwrap();
-
-        // Send to Fuelet indexer
-        let url = format!(
-            "https://prod.api.fuelet.app/testnet/nft/73/mint/{}?domain={}&asset=0x{}",
-            to.to_string(),
-            domain,
-            asset_id.to_string()
-        );
-        reqwest::Client::new().post(url).send().await.unwrap();
     }
 
     pub async fn set_fees(
