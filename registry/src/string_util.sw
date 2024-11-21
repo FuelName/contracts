@@ -34,18 +34,12 @@ fn convert_num_to_ascii_bytes(num: u64) -> Bytes {
 
 fn check_domain_len(domain: String) -> bool {
     let length = domain.as_bytes().len();
-    if (length < MIN_DOMAIN_LENGTH) {
-        return false;
-    }
-    if (length > MAX_DOMAIN_LENGTH) {
-        return false;
-    }
-    true
+    length >= MIN_DOMAIN_LENGTH && length <= MAX_DOMAIN_LENGTH
 }
 
 fn check_domain_part_len(domain_part: String) -> bool {
     let length = domain_part.as_bytes().len();
-    length >= MIN_DOMAIN_PART_LENGTH
+    length >= MIN_DOMAIN_PART_LENGTH && length <= MAX_DOMAIN_LENGTH
 }
 
 fn symbol_is_dash(symbol: u8) -> bool {
@@ -73,16 +67,16 @@ fn check_domain_symbols(domain: String, allow_dots: bool) -> bool {
             return false;
         }
         let is_boundary_symbol = i == 0 || i == bytes.len() - 1;
-        let is_not_allowed_boundary_symbol = symbol_is_dash(symbol) || symbol_is_dot(symbol);
-        if (is_boundary_symbol && is_not_allowed_boundary_symbol) {
-            return false;
+        if (is_boundary_symbol) {
+            if (symbol_is_dash(symbol) || symbol_is_dot(symbol)) {
+                return false;
+            }
         }
         i = i + 1;
     }
     true
 }
 
-// TODO: verify the logic
 pub fn domain_is_allowed(domain: String) -> bool {
     check_domain_len(domain) && check_domain_symbols(domain, true)
 }
@@ -127,7 +121,7 @@ pub fn build_domain_name(child: String, parent: String) -> String {
 
 pub fn build_token_uri(domain_name: String) -> String {
     let mut result = Bytes::new();
-    push_bytes(result, String::from_ascii_str("https://prod.api.fuelet.app/testnet/fuelname/metadata/").as_bytes());
+    push_bytes(result, String::from_ascii_str("https://prod.api.fuelname.com/testnet/metadata/").as_bytes());
     push_bytes_replace(result, domain_name.as_bytes());
     String::from_ascii(result)
 }
@@ -198,13 +192,13 @@ fn test_dots_are_not_allowed_in_domain_parts() {
 fn test_build_domain_name() {
     assert(build_domain_name(String::from_ascii_str("a"), String::from_ascii_str("b")) == String::from_ascii_str("a.b"));
     assert(build_domain_name(String::from_ascii_str("abcdef"), String::from_ascii_str("123456")) == String::from_ascii_str("abcdef.123456"));
-    assert(build_domain_name(String::from_ascii_str("fuelet"), String::from_ascii_str("fuel")) == String::from_ascii_str("fuelet.fuel"));
+    assert(build_domain_name(String::from_ascii_str("domain"), String::from_ascii_str("fuel")) == String::from_ascii_str("domain.fuel"));
 }
 #[test]
 fn test_build_token_uri() {
-    assert(build_token_uri(String::from_ascii_str("domain")) == String::from_ascii_str("https://prod.api.fuelet.app/testnet/fuelname/metadata/domain"));
-    assert(build_token_uri(String::from_ascii_str("dom-ain.fuel")) == String::from_ascii_str("https://prod.api.fuelet.app/testnet/fuelname/metadata/dom%2Dain%2Efuel"));
-    assert(build_token_uri(String::from_ascii_str("one.two.three.fuel")) == String::from_ascii_str("https://prod.api.fuelet.app/testnet/fuelname/metadata/one%2Etwo%2Ethree%2Efuel"));
+    assert(build_token_uri(String::from_ascii_str("domain")) == String::from_ascii_str("https://prod.api.fuelname.com/testnet/metadata/domain"));
+    assert(build_token_uri(String::from_ascii_str("dom-ain.fuel")) == String::from_ascii_str("https://prod.api.fuelname.com/testnet/metadata/dom%2Dain%2Efuel"));
+    assert(build_token_uri(String::from_ascii_str("one.two.three.fuel")) == String::from_ascii_str("https://prod.api.fuelname.com/testnet/metadata/one%2Etwo%2Ethree%2Efuel"));
 }
 #[test]
 fn test_build_domain_hash_base() {

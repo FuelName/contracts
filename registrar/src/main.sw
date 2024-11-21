@@ -55,7 +55,7 @@ fn get_domain_price(asset: AssetId, domain: String, years: u64) -> u64 {
         return 0;
     }
     let length = domain.as_bytes().len();
-    require(length >= 3, ValidationError::InvalidDomainName); // TODO: duplication of string_utils. Move to a shared module
+    require(length >= 3, ValidationError::InvalidDomainName);
     require(years > 0 && years <= 3, ValidationError::InvalidPeriod);
     let fees = storage.pricing.get(asset).try_read();
     require(fees.is_some(), ValidationError::WrongFeeAsset);
@@ -115,6 +115,9 @@ impl DomainRegistrar for Contract {
             String::from_ascii_str(from_str_array(ROOT_DOMAIN)),
             domain,
             Some(expiration_ts),
+            // TODO: restrict max grace period in resolver. 
+            //  It probably can't exceed expiration ts + grace period of a root domain.
+            //  We can also enforce max grace period duration
             Some(storage.grace_period_duration.read()),
             DEFAULT_RESOLVER_CONTRACT_ID
         );
