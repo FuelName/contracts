@@ -4,7 +4,7 @@ use std::{constants::ZERO_B256, context::balance_of, string::String, inputs::{In
 
 abi DomainRegistry {
     #[storage(read, write)]
-    fn initialize();
+    fn initialize() -> Identity;
 
     #[storage(read, write)]
     fn register_high_level_domain(recipient: Identity, name: String) -> AssetId;
@@ -63,7 +63,7 @@ abi SimpleDomainResolver {
 
 abi DomainRegistrar {
     #[storage(read, write)]
-    fn initialize();
+    fn initialize() -> Identity;
 
     #[storage(read)]
     fn domain_price(domain: String, years: u64, asset: AssetId) -> u64;
