@@ -127,6 +127,7 @@ impl DomainRegistrar for Contract {
     #[payable]
     #[storage(read)]
     fn renew_domain(name: String, years: u64) {
+        // TODO: forbid to keep ownership for more than 3 years
         check_domain_payment(name, years);
         let registry_contract = abi(DomainRegistry, REGISTRY_CONTRACT_ID.into());
         let current_expiration = match registry_contract.get_expiration_by_parent(name, String::from_ascii_str(from_str_array(ROOT_DOMAIN))) {
