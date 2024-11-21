@@ -90,6 +90,7 @@ impl DomainRegistrar for Contract {
         let sender = msg_sender().unwrap();
         initialize_ownership(sender);
         storage.pricing.insert(AssetId::base(), ETH_FEES);
+        // set grace period here to make it accessible through proxy
         storage.grace_period_duration.write(MIN_GRACE_PERIOD_DURATION);
         log(
             SetFeesEvent {
