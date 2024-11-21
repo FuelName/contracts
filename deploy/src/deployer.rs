@@ -194,6 +194,7 @@ async fn deploy_registry_contract(
     println!("Deploying registry contract...");
     let init = |deploy: DeployResult| async move {
         let contract = Registry::new(deploy.target_id, wallet.clone());
+        // call target initialize() directly so no one else can set the owner
         let owner = contract.methods()
             .initialize()
             .call()
@@ -255,6 +256,7 @@ async fn deploy_registrar_contract(
         .with_DEFAULT_RESOLVER_CONTRACT_ID(resolver.proxy_id)
         .unwrap();
     let init = |registrar: DeployResult| async move {
+        // call target initialize() directly so no one else can set the owner
         let owner = Registrar::new(registrar.target_id, wallet.clone())
             .methods()
             .initialize()
