@@ -86,3 +86,11 @@ The `Registrar` contract manages the sale and registration of new domains under 
 - **Domain Registration**: Facilitates the purchase of new `.fuel` domains.
 - **Price Management**: Supports dynamic pricing for domain registration.
 - **Renewals**: Allows users to renew domains to extend ownership.
+
+## Deployment
+
+- create `.env` file in `deploy` directory (see `.env.example`)
+- run the following command
+```bash
+cd deploy && cargo run deploy
+```

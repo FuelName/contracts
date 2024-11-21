@@ -10,12 +10,9 @@ license = "Apache-2.0"
 fuels = { workspace = true, features = ["fuel-core-lib"] }
 tokio = { workspace = true, features = ["rt", "macros"] }
 rand = { workspace = true }
-chrono = { workspace = true }
+deploy = { path = "../deploy" }
 
 [[test]]
 harness = true
 name = "integration_tests"
 path = "tests/harness.rs"
-
-[dependencies]
-reqwest = "0.12.3"

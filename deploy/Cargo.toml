@@ -1,0 +1,15 @@
+[package]
+name = "deploy"
+version = "0.1.0"
+edition = "2021"
+authors = ["fuelnamedev@gmail.com"]
+license = "Apache-2.0"
+
+[dependencies]
+fuels = { workspace = true, features = ["fuel-core-lib"] }
+tokio = { workspace = true, features = ["full"]}
+rand = { workspace = true }
+dotenvy = { workspace = true }
+maplit = { workspace = true }
+chrono = { workspace = true }
+reqwest = { workspace = true }
