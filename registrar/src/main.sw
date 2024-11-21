@@ -90,6 +90,7 @@ impl DomainRegistrar for Contract {
         let sender = msg_sender().unwrap();
         initialize_ownership(sender);
         storage.pricing.insert(AssetId::base(), ETH_FEES);
+        storage.grace_period_duration.write(MIN_GRACE_PERIOD_DURATION);
         log(
             SetFeesEvent {
                 asset_id: AssetId::base(),

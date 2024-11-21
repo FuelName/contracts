@@ -1,16 +1,15 @@
+use std::str::FromStr;
 use fuels::prelude::*;
 use fuels::types::Identity;
+use deploy::deployer;
+use deploy::deployer::{DeployParams, DeployTarget, LocalDeployParams};
+use deploy::fixture::Fixture;
 
-use utils::{connect_to_deployed_contracts, setup};
-
-use crate::utils::BASE_ASSET_ID;
-use crate::utils::COMMON_ANNUAL_DEFAULT_FEE;
-use crate::utils::FOUR_LETTER_ANNUAL_DEFAULT_FEE;
-use crate::utils::MIN_GRACE_PERIOD_DURATION;
-use crate::utils::ONE_YEAR_SECONDS;
-use crate::utils::THREE_LETTER_ANNUAL_DEFAULT_FEE;
-
-mod utils;
+const THREE_LETTER_ANNUAL_DEFAULT_FEE: u64 = 50000000;
+const FOUR_LETTER_ANNUAL_DEFAULT_FEE: u64 = 10000000;
+const COMMON_ANNUAL_DEFAULT_FEE: u64 = 1000000;
+const MIN_GRACE_PERIOD_DURATION: u64 = 2592000; // 30 days
+const ONE_YEAR_SECONDS: u64 = 31622400;
 
 const HIGH_LEVEL_DOMAIN: &str = "fuel";
 const SUB_DOMAIN_PART_1: &str = "fuelname";
@@ -20,66 +19,53 @@ const SUB_DOMAIN_2: &str = "fuelet.fuel";
 const COMMON_DEFAULT_FEE: u64 = COMMON_ANNUAL_DEFAULT_FEE;
 const THREE_LETTER_DEFAULT_FEE: u64 = THREE_LETTER_ANNUAL_DEFAULT_FEE;
 const FOUR_LETTER_DEFAULT_FEE: u64 = FOUR_LETTER_ANNUAL_DEFAULT_FEE;
-
-//TODO clean up
-
-#[ignore]
-#[tokio::test]
-// It's not a test but a deployment script. Just don't know where else to put it.
-async fn deploy_contracts() {
-    setup(true).await;
+const BASE_ASSET_ID: AssetId = AssetId::BASE;
+pub fn usdc_asset_id() -> AssetId {
+    AssetId::from_str("0x286c479da40dc953bddc3bb4c453b608bba2e0ac483b077bd475174115395e6b").unwrap()
 }
 
-#[ignore]
-#[tokio::test]
-async fn call_on_chain_function() {
-    let fixture = connect_to_deployed_contracts().await;
-    // let domain_name = fixture.get_domain_name(AssetId::from_str("0xb0e42e49bcc1bc732be8b55fcf015e2e4093a4e36f83c827b4451b15c8cd50f9").unwrap()).await;
-    // println!("{:?}", domain_name);
-
-    // fixture.withdraw_funds().await;
-
-    // let total_assets = fixture.get_total_assets().await;
-    // println!("Total assets: {}", total_assets);
-
-    // let asset_id = fixture.get_domain_asset_id("out.fuel").await;
-    // println!("Asset ID: {:?}", asset_id);
-    // let uri = fixture.get_domain_uri(asset_id).await;
-    // println!("URI: {:?}", uri);
-
-    // fixture.transfer(&fixture.user, "dino.fuel", &Bech32Address::from_str("fuel1xvwtd4tz3509kugtxx783kd2rrywyqcwper54sku8v7x5hgw7axq6xduf3").unwrap()).await;
+async fn get_custom_wallets() -> (WalletUnlocked, WalletUnlocked) {
+    let wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new_multiple_assets(
+            2,
+            vec![
+                AssetConfig {
+                    id: BASE_ASSET_ID,
+                    num_coins: 2,
+                    coin_amount: 1_000_000_000,
+                },
+                AssetConfig {
+                    id: usdc_asset_id(),
+                    num_coins: 2,
+                    coin_amount: 1_000_000_000,
+                }
+            ],
+        ),
+        None,
+        None,
+    )
+        .await
+        .unwrap();
+    (wallets[0].clone(), wallets[1].clone())
 }
 
-#[ignore]
-#[tokio::test]
-async fn mint_reserved_domains() {
-    let fixture = connect_to_deployed_contracts().await;
-    let reserved_domains = vec!["wallet", "fuelnameservice", "fns", "fueldomains", "domains", "thunder", "spark", "swaylend", "bsafe", "sway", "fuel", "fuelnetwork"];
-    for domain in reserved_domains {
-        let asset = fixture._mint_domain(domain, 3, 0, None).await.unwrap();
-        println!("{}: {}", domain, asset);
-    }
+async fn setup() -> Fixture {
+    let (deployer, user) = get_custom_wallets().await;
+    let params: LocalDeployParams = LocalDeployParams {
+        deployer_wallet: deployer,
+        user_wallet: user,
+        deploy_params: DeployParams::InitialDeploy,
+    };
+    deployer::deploy(DeployTarget::Local(params)).await
 }
 
 mod tests {
-    use rand::random;
-    use crate::utils::{usdc_asset_id, Fixture};
     use super::*;
-
-    impl Fixture {
-        async fn mint_domain(
-            &self,
-            domain: &str,
-            years: u64,
-            fee_to_transfer: u64,
-        ) -> Result<AssetId> {
-            self._mint_domain(domain, years, fee_to_transfer, None).await
-        }
-    }
+    use rand::random;
 
     #[tokio::test]
     async fn test_high_level_domain() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
 
         let domain_asset_id = fixture.get_domain_asset_id(HIGH_LEVEL_DOMAIN).await;
         let domain_exists = fixture.domain_exists(domain_asset_id).await;
@@ -96,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint_domain() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
 
         let domain_asset_id_before_minting = fixture.get_domain_asset_id(SUB_DOMAIN_1).await;
         let domain_exist_before_minting = fixture.domain_exists(domain_asset_id_before_minting).await;
@@ -127,7 +113,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fail_to_mint_the_same_domain_twice() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 2, COMMON_DEFAULT_FEE * 2).await.unwrap();
 
         let second_mint_result = fixture.mint_domain(SUB_DOMAIN_PART_1, 2, COMMON_DEFAULT_FEE * 2).await;
@@ -140,14 +126,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_fail_to_mint_with_inappropriate_fee() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let result = fixture.mint_domain(SUB_DOMAIN_PART_1, 2, COMMON_DEFAULT_FEE).await;
         assert_eq!(result.is_err(), true);
     }
 
     #[tokio::test]
     async fn test_mint_two_domains() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 2, COMMON_DEFAULT_FEE * 2).await.unwrap();
         fixture.mint_domain(SUB_DOMAIN_PART_2, 1, COMMON_DEFAULT_FEE).await.unwrap();
 
@@ -162,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint_domains_of_different_length() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         for len in 3..60 {
             let fee = if len == 3 { THREE_LETTER_DEFAULT_FEE } else if len == 4 { FOUR_LETTER_DEFAULT_FEE } else { COMMON_DEFAULT_FEE };
             let domain = "a".repeat(len);
@@ -176,7 +162,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint_domains_of_invalid_length() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         for invalid_len in [1, 2, 60, 61].iter() {
             let domain = "a".repeat(*invalid_len);
             let full = format!("{}.fuel", domain);
@@ -188,7 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint_domains_with_invalid_symbols() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         for invalid_domain in ["абвгд", "abc_def", "!1!!1", "𡨸漢𡨸漢"].iter() {
             let full = format!("{}.fuel", invalid_domain);
             println!("Testing invalid symbols of '{}'", full);
@@ -199,7 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_domain_resolution() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         let minted_asset = fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         let before_set = fixture.resolve_domain(SUB_DOMAIN_1).await;
@@ -220,7 +206,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_primary_domain_resolution() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         let minted_asset_1 = fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         let minted_asset_2 = fixture.mint_domain(SUB_DOMAIN_PART_2, 1, COMMON_DEFAULT_FEE).await.unwrap();
@@ -249,7 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_funds_withdrawal() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         for domain in ["abcde", "1238172", "aaaaa", "fuelet", "000000"].iter() {
             fixture.mint_domain(&domain, 1, COMMON_DEFAULT_FEE).await.unwrap();
         }
@@ -261,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_funds_withdrawal_other_assets() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
         for domain in ["abcde", "1238172", "aaaaa", "fuelet", "000000"].iter() {
             fixture._mint_domain(&domain, 1, 10, Some(usdc_asset_id())).await.unwrap();
@@ -274,7 +260,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_resolver() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let original_resolver: ContractId = fixture.resolver_contract.contract_id().clone().into();
         let new_resolver = ContractId::new(random());
         let additional_resolver = ContractId::new(random());
@@ -297,7 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_fees() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let updated_three_letter_fee = 1000;
         let updated_four_letter_fee = 100;
         let updated_common_fee = 10;
@@ -324,7 +310,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_primary_if_no_resolution_set() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
 
         fixture.set_primary(SUB_DOMAIN_1).await;
@@ -333,7 +319,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_primary_if_wrong_resolution_set() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         let deployer_identity = Identity::Address(fixture.deployer.address().into());
 
@@ -344,7 +330,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_primary_if_correct_resolution_set() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         let domain_asset = fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
 
@@ -357,7 +343,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_primary_if_expired() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.set_resolution(SUB_DOMAIN_1, Some(user_identity.clone())).await;
@@ -368,7 +354,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_primary_if_resolution_is_not_set() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.set_primary(SUB_DOMAIN_1).await;
     }
@@ -376,7 +362,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_primary_if_reset() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         let deployer_identity = Identity::Address(fixture.deployer.address().into());
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
@@ -389,7 +375,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_resolution_if_expired() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.skip_n_days(380, true).await;
@@ -398,7 +384,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_successful_reverse_resolution() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         let asset = fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.set_resolution(SUB_DOMAIN_1, Some(user_identity.clone())).await;
@@ -410,7 +396,7 @@ mod tests {
     #[tokio::test]
     async fn test_reverse_resolution_if_expired() {
         // should be available for now as long as the old address is unchanged
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.set_resolution(SUB_DOMAIN_1, Some(user_identity.clone())).await;
@@ -422,7 +408,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reverse_resolution_if_unset() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let user_identity = Identity::Address(fixture.user.address().into());
         let deployer_identity = Identity::Address(fixture.deployer.address().into());
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
@@ -436,20 +422,20 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_set_grace_period_not_owner() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.set_grace_period_as_user(MIN_GRACE_PERIOD_DURATION + 1).await;
     }
 
     #[tokio::test]
     #[should_panic]
     async fn test_set_grace_period_less_than_min() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.set_grace_period(MIN_GRACE_PERIOD_DURATION - 1).await;
     }
 
     #[tokio::test]
     async fn test_set_grace_period_happy_path() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let gp = MIN_GRACE_PERIOD_DURATION + 1000;
         fixture.set_grace_period(gp).await;
         assert_eq!(gp, fixture.get_grace_period().await);
@@ -457,7 +443,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_renew_happy_path() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         let expiration_before = fixture.get_domain_expiration(SUB_DOMAIN_1).await.unwrap();
         fixture.renew_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await;
@@ -467,21 +453,21 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_renew_inactive_domain() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.renew_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await;
     }
 
     #[tokio::test]
     #[should_panic]
     async fn test_mint_while_active() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
     }
 
     #[tokio::test]
     async fn test_mint_after_expiration() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         let initial_asset = fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.skip_n_days(400, true).await; // more than exp + grace
         let new_asset = fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
@@ -491,7 +477,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_mint_after_expiration_before_grace() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.skip_n_days(380, true).await; // more than exp but less than exp + grace
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
@@ -500,7 +486,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_mint_before_expiration_before_grace() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.skip_n_days(340, true).await; // less than exp
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
@@ -509,7 +495,7 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_wrong_domain_renewal() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         fixture.renew_domain(SUB_DOMAIN_1, 1, COMMON_DEFAULT_FEE).await;
     }
@@ -517,20 +503,20 @@ mod tests {
     #[tokio::test]
     #[should_panic(expected = "WrongFeeAsset")]
     async fn test_wrong_asset_get_price() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.get_domain_price(SUB_DOMAIN_PART_1, 1, &usdc_asset_id()).await;
     }
 
     #[tokio::test]
     #[should_panic(expected = "WrongFeeAsset")]
     async fn test_wrong_asset_payment() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture._mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE, Some(usdc_asset_id())).await.unwrap();
     }
 
     #[tokio::test]
     async fn test_different_asset_payment() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
         let price = fixture.get_domain_price(SUB_DOMAIN_PART_1, 1, &usdc_asset_id()).await;
         let balance = fixture.user.get_asset_balance(&usdc_asset_id()).await.unwrap();
@@ -543,7 +529,7 @@ mod tests {
     #[tokio::test]
     #[should_panic(expected = "WrongFeeAmount")]
     async fn test_wrong_fee_amount() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.set_fees(&usdc_asset_id(), 1000, 100, 10).await;
         let price = fixture.get_domain_price(SUB_DOMAIN_PART_1, 1, &usdc_asset_id()).await;
         assert_eq!(price, 10);
@@ -553,7 +539,7 @@ mod tests {
     #[tokio::test]
     #[should_panic(expected = "WrongFeeAsset")]
     async fn test_remove_fee_asset() {
-        let fixture = setup(false).await;
+        let fixture = setup().await;
         fixture.remove_fee_asset(&BASE_ASSET_ID).await;
         assert!(fixture.mint_domain(SUB_DOMAIN_PART_2, 1, COMMON_DEFAULT_FEE).await.is_err());
         fixture.get_domain_price(SUB_DOMAIN_PART_2, 1, &BASE_ASSET_ID).await;
