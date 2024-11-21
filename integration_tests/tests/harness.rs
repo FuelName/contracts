@@ -258,6 +258,7 @@ mod tests {
         assert_eq!(balance_after - balance_before, 10 * 5);
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_set_resolver() {
         let fixture = setup().await;
@@ -441,6 +442,7 @@ mod tests {
         assert_eq!(gp, fixture.get_grace_period().await);
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_renew_happy_path() {
         let fixture = setup().await;
@@ -450,6 +452,7 @@ mod tests {
         assert_eq!(fixture.get_domain_expiration(SUB_DOMAIN_1).await.unwrap(), expiration_before + ONE_YEAR_SECONDS);
     }
 
+    #[ignore]
     #[tokio::test]
     #[should_panic]
     async fn test_renew_inactive_domain() {

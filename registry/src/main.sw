@@ -267,6 +267,7 @@ impl DomainRegistry for Contract {
 
     #[storage(read, write)]
     fn register_sub_domain(recipient: Identity, parent: String, name: String, expiration: Option<u64>, grace_period: Option<u64>, resolver: ContractId) -> AssetId {
+        require(parent == String::from_ascii_str("fuel"), "Only .fuel subdomains are allowed for now");
         let full_domain_name = check_parent_ownership_and_build_full_name(name, parent);
         validate_domain_name_part(name);
         validate_domain_name(full_domain_name);
@@ -278,6 +279,7 @@ impl DomainRegistry for Contract {
 
     #[storage(read, write)]
     fn renew_domain(name: String, parent: String, expiration: u64) {
+        require(false, "Temporarily disabled");
         let full_domain_name = check_parent_ownership_and_build_full_name(name, parent);
         let (_, asset_id) = domain_to_asset_id(full_domain_name);
         // check that asset exists and not exceed expiration + grace period
@@ -314,6 +316,7 @@ impl DomainRegistry for Contract {
 
     #[storage(read, write)]
     fn set_resolver(domain: String, resolver: ContractId) {
+        require(false, "Temporarily disabled");
         let (_, asset) = domain_to_asset_id(domain); 
         require(is_asset_owner(asset), OwnershipError::NotDomainOwner);
         require(asset_exists(asset), AssetError::AssetDoesNotExist);
