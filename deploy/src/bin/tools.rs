@@ -1,10 +1,25 @@
 use deploy::deployer::{ContractType, DeployResult};
 use deploy::fixture::Fixture;
-use fuels::prelude::ContractId;
+use deploy::shared::{config, get_wallets};
+use fuelname_sdk::interface::{FuelnameContracts, ReadonlySdk};
+use fuels::prelude::*;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::str::FromStr;
-use deploy::shared::{config, get_wallets};
+
+///example of how to create the sdk
+async fn create_sdk() -> impl ReadonlySdk {
+    use fuels::prelude::*;
+    let provider = Provider::connect("https://testnet.fuel.network").await.unwrap();
+    FuelnameContracts::connect_readonly(provider, None, None).await.unwrap()
+}
+
+///example of how to use the sdk
+async fn check_domain_price(sdk: &impl ReadonlySdk, domain: &str) {
+    let asset_id = AssetId::from_str("0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07").unwrap();
+    let price = sdk.get_domain_price(domain, 1, &asset_id).await.unwrap().value;
+    println!("Price for {}: {}", domain, price);
+}
 
 #[tokio::main]
 async fn main() {
@@ -27,6 +42,7 @@ async fn main() {
     let fixture = Fixture::connect(deployer, user, contracts);
 
     // mint_reserved_domains(fixture).await;
+    // check_domain_price(&create_sdk().await, "fuelname.fuel").await;
     call_on_chain_function(fixture).await;
 }
 

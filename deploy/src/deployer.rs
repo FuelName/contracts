@@ -12,6 +12,7 @@ use rand::Rng;
 use std::future::Future;
 use crate::fixture::Fixture;
 use crate::shared::{config, get_wallets};
+use fuelname_sdk::interface::{Registrar, Registry, Resolver, ResolverConfigurables, RegistrarConfigurables};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ContractType {
@@ -32,20 +33,8 @@ impl ContractType {
 
 abigen!(
     Contract(
-        name = "Registrar",
-        abi = "registrar/out/debug/registrar-abi.json"
-    ),
-    Contract(
-        name = "Registry",
-        abi = "registry/out/debug/registry-abi.json"
-    ),
-    Contract(
-        name = "Resolver",
-        abi = "resolver/out/debug/resolver-abi.json"
-    ),
-    Contract(
         name = "Proxy",
-        abi = "proxy/out/debug/proxy-abi.json"
+        abi = "proxy/out/release/proxy-abi.json"
     ),
 );
 
@@ -145,7 +134,7 @@ async fn _deploy(
     let mut rng = rand::thread_rng();
     let configurables = configurables.unwrap_or_default();
     let id = Contract::load_from(
-        format!("../{}/out/debug/{}.bin", contract, contract),
+        format!("../{}/out/release/{}.bin", contract, contract),
         LoadConfiguration::default().with_configurables(configurables),
     )
         .unwrap()

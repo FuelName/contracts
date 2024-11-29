@@ -13,3 +13,4 @@ dotenvy = { workspace = true }
 maplit = { workspace = true }
 chrono = { workspace = true }
 reqwest = { workspace = true }
+fuelname-sdk = { path = "../../fuelname-sdk-rs" } #TODO

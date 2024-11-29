@@ -1,8 +1,11 @@
 use fuels::{accounts::wallet::WalletUnlocked, prelude::*};
 use std::collections::HashMap;
 
-use crate::deployer::{ContractType, DeployResult, Metadata, Registrar, Registry, Resolver};
+use crate::deployer::{ContractType, DeployResult};
+use crate::fixture::Caller::{Deployer, User};
 use chrono::Duration;
+use fuelname_sdk::interface::{DomainId, Fee, Metadata, Registrar, RegistrarReadonlySdk, RegistrarSdk, Registry, RegistryReadonlySdk, RegistrySdk, Resolver};
+use fuelname_sdk::interface::{FuelnameContracts, Sdk};
 use fuels::types::Identity;
 
 pub struct Fixture {
@@ -37,36 +40,15 @@ impl Fixture {
     }
 
     pub async fn domain_exists(&self, asset_id: AssetId) -> bool {
-        self.registry_contract
-            .methods()
-            .domain_exists(asset_id)
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
+        self.sdk(Deployer).await.domain_exists(DomainId::Asset(asset_id)).await.unwrap().value
     }
 
     pub async fn get_domain_asset_id(&self, domain: &str) -> AssetId {
-        self.registry_contract
-            .methods()
-            .get_domain_asset_id(domain.to_string())
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
+        self.sdk(Deployer).await.get_domain_asset(domain).await.unwrap().value
     }
 
     pub async fn get_domain_name(&self, asset: AssetId) -> String {
-        self.registry_contract
-            .methods()
-            .get_domain_name(asset)
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
+        self.sdk(Deployer).await.get_domain_name(asset).await.unwrap().value
     }
 
     pub async fn get_token_uri(&self, asset: AssetId) -> Option<Metadata> {
@@ -105,25 +87,11 @@ impl Fixture {
     }
 
     pub async fn get_domain_resolver(&self, domain: &str) -> Option<ContractId> {
-        self.registry_contract
-            .methods()
-            .get_resolver(domain.to_string())
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
+        self.sdk(Deployer).await.get_domain_resolver_id(domain).await.unwrap().value
     }
 
     pub async fn get_domain_expiration(&self, domain: &str) -> Option<u64> {
-        self.registry_contract
-            .methods()
-            .get_expiration(domain.to_string())
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
+        self.sdk(Deployer).await.get_domain_expiration(domain).await.unwrap().value
     }
 
     pub async fn get_domain_price(
@@ -132,14 +100,7 @@ impl Fixture {
         years: u64,
         asset: &AssetId,
     ) -> u64 {
-        self.registrar_contract
-            .methods()
-            .domain_price(domain.to_string(), years, *asset)
-            .with_contract_ids(&[self.registrar().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
+        self.sdk(User).await.get_domain_price(domain, years, asset).await.unwrap().value
     }
 
     pub async fn remove_fee_asset(
@@ -163,134 +124,41 @@ impl Fixture {
         fee_to_transfer: u64,
         asset: Option<AssetId>,
     ) -> Result<AssetId> {
-        let tx_policies = TxPolicies::default()
-            .with_script_gas_limit(1_000_000);
-        self.registrar_contract
-            .clone()
-            .with_account(self.user.clone())
-            .methods()
-            .mint_domain(domain.to_string(), years)
-            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
-            .with_tx_policies(tx_policies)
-            .call_params(
-                CallParameters::default()
-                    .with_amount(fee_to_transfer)
-                    .with_asset_id(asset.unwrap_or(AssetId::BASE)),
+        self.sdk(User).await
+            .mint_domain(
+                domain,
+                years,
+                Fee {
+                    asset: asset.unwrap_or(AssetId::BASE),
+                    amount: fee_to_transfer,
+                },
+                None,
             )
-            .unwrap()
-            .with_contract_ids(&[
-                self.registrar().target_id.into(),
-                self.registry().proxy_id.into(),
-                self.registry().target_id.into()
-            ])
-            .call()
             .await
             .map(|response| response.value)
     }
 
     pub async fn resolve_domain(&self, domain: &str) -> Option<Identity> {
-        let resolver: ContractId = self
-            .registry_contract
-            .methods()
-            .get_resolver(domain.to_string())
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value
-            .unwrap();
-        assert_eq!(resolver, self.resolver_contract.id().clone().into());
-        let asset_id: AssetId = self
-            .registry_contract
-            .methods()
-            .get_domain_asset_id(domain.to_string())
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value;
-        let resolved: Option<Identity> = self
-            .resolver_contract
-            .methods()
-            .resolve(asset_id)
-            .with_contract_ids(&[self.resolver().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value;
-        resolved
+        self.sdk(Deployer).await.resolve_domain_to_address(domain).await.unwrap().value
     }
 
     pub async fn reverse_resolve_domain(&self, identity: Identity) -> Option<AssetId> {
-        let resolved: Option<AssetId> = self
-            .registry_contract
-            .methods()
-            .resolve_to_primary_domain(identity)
-            .with_contract_ids(&[
-                self.registry().target_id.into(),
-                self.resolver().proxy_id.into(),
-                self.resolver().target_id.into(),
-            ])
-            .call()
-            .await
-            .unwrap()
-            .value;
-        resolved
+        let domain = self.sdk(Deployer).await.get_primary_domain(identity).await.unwrap().value;
+        match domain {
+            Some(domain) => {
+                let asset = self.get_domain_asset_id(&domain).await;
+                Some(asset)
+            }
+            None => None,
+        }
     }
 
     pub async fn set_resolution(&self, domain: &str, to: Option<Identity>) {
-        let asset_id: AssetId = self
-            .registry_contract
-            .methods()
-            .get_domain_asset_id(domain.to_string())
-            .with_contract_ids(&[
-                self.registry().target_id.into(),
-                self.resolver().proxy_id.into(),
-                self.resolver().target_id.into(),
-            ])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value;
-        self.resolver_contract
-            .clone()
-            .with_account(self.user.clone())
-            .methods()
-            .set(asset_id, to)
-            .with_contract_ids(&[
-                self.registry().proxy_id.into(),
-                self.registry().target_id.into(),
-                self.resolver().target_id.into()
-            ])
-            .add_custom_asset(asset_id, 1, Some(self.user.address().into()))
-            .call()
-            .await
-            .unwrap();
+        self.sdk(User).await.set_address(domain, to, None).await.unwrap();
     }
 
     pub async fn set_primary(&self, domain: &str) {
-        let asset_id: AssetId = self
-            .registry_contract
-            .methods()
-            .get_domain_asset_id(domain.to_string())
-            .with_contract_ids(&[self.registry().target_id.into()])
-            .simulate(Execution::StateReadOnly)
-            .await
-            .unwrap()
-            .value;
-        self.registry_contract
-            .clone()
-            .with_account(self.user.clone())
-            .methods()
-            .set_primary(asset_id)
-            .with_contract_ids(&[
-                self.registry().target_id.into(),
-                self.resolver().proxy_id.into(),
-                self.resolver().target_id.into(),
-            ])
-            .call()
-            .await
-            .unwrap();
+        self.sdk(User).await.set_primary_domain(domain, None).await.unwrap();
     }
 
     pub async fn withdraw_funds(&self, asset_id: &AssetId) {
@@ -441,4 +309,23 @@ impl Fixture {
             contracts,
         }
     }
+
+    async fn sdk(&self, caller: Caller) -> impl Sdk {
+        let registry = self.contracts.get(&ContractType::Registry).unwrap();
+        let registrar = self.contracts.get(&ContractType::Registrar).unwrap();
+        let wallet = match caller {
+            Deployer => self.deployer.clone(),
+            User => self.user.clone(),
+        };
+        FuelnameContracts::connect(
+            wallet,
+            Some(registrar.proxy_id),
+            Some(registry.proxy_id),
+        ).await.unwrap()
+    }
+}
+
+enum Caller {
+    Deployer,
+    User,
 }
