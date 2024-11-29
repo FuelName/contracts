@@ -1,6 +1,8 @@
+use crate::fixture::Fixture;
+use crate::shared::{config, get_wallets};
+use fuelname_sdk::interface::{Registrar, RegistrarConfigurables, Registry, Resolver, ResolverConfigurables, Proxy};
 use fuels::core::Configurables;
 use fuels::prelude::{
-    abigen,
     Contract,
     ContractId,
     LoadConfiguration,
@@ -10,9 +12,6 @@ use fuels::prelude::{
 use maplit::hashmap;
 use rand::Rng;
 use std::future::Future;
-use crate::fixture::Fixture;
-use crate::shared::{config, get_wallets};
-use fuelname_sdk::interface::{Registrar, Registry, Resolver, ResolverConfigurables, RegistrarConfigurables};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ContractType {
@@ -30,14 +29,6 @@ impl ContractType {
         }
     }
 }
-
-abigen!(
-    Contract(
-        name = "Proxy",
-        abi = "proxy/out/release/proxy-abi.json"
-    ),
-);
-
 
 #[derive(Debug, Clone)]
 pub struct ProxiesInfo {
