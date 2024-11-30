@@ -38,6 +38,7 @@ struct SetPrimaryEvent {
 
 const EXPIRATION_KEY: str[10] = __to_str_array("expiration");
 const DOMAIN_NAME_KEY: str[11] = __to_str_array("domain_name");
+const GENERATION_KEY: str[10] = __to_str_array("generation");
 const URI_KEY: str[3] = __to_str_array("uri");
 const GRACE_PERIOD_KEY: str[12] = __to_str_array("grace_period");
 const RESOLVER_KEY: str[8] = __to_str_array("resolver");
@@ -149,13 +150,13 @@ fn is_asset_active(asset: AssetId) -> bool {
 fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, grace_period: Option<u64>, resolver: Option<ContractId>) -> AssetId {
     let (_, old_asset_id) = domain_to_asset_id(full_name);
     require(!asset_exists(old_asset_id), MintError::AssetAlreadyMinted);
-    let gen = get_domain_gen(full_name);
-    storage.asset_genesis.insert(sha256(full_name), gen + 1);
+    let gen = get_domain_gen(full_name) + 1;
+    storage.asset_genesis.insert(sha256(full_name), gen);
     let (sub_id, asset_id) = domain_to_asset_id(full_name);
     let total_assets = _total_assets(storage.total_assets);
     storage.total_assets.write(total_assets + 1);
     mint_to(recipient, sub_id, 1);
-    set_token_metadata(asset_id, full_name, expiration, grace_period, resolver);
+    set_token_metadata(asset_id, full_name, expiration, grace_period, resolver, gen);
     let sender = msg_sender().unwrap();
     SetNameEvent::new(asset_id, Some(String::from_ascii_str("Fuelname")), sender).log();
     SetSymbolEvent::new(asset_id, Some(String::from_ascii_str("FNS")), sender).log();
@@ -164,11 +165,18 @@ fn mint_token(recipient: Identity, full_name: String, expiration: Option<u64>, g
     asset_id
 }
 
-// TODO: store generation as meta
 #[storage(read, write)]
-fn set_token_metadata(asset: AssetId, full_name: String, expiration: Option<u64>,  grace_period: Option<u64>, resolver: Option<ContractId>) {
+fn set_token_metadata(
+    asset: AssetId, 
+    full_name: String,
+    expiration: Option<u64>, 
+    grace_period: Option<u64>, 
+    resolver: Option<ContractId>,
+    generation: u64,
+) {
     _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(DOMAIN_NAME_KEY)), Metadata::String(full_name));
     _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(URI_KEY)), Metadata::String(string_util::build_token_uri(full_name)));
+    _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(GENERATION_KEY)), Metadata::Int(generation));
     match expiration {
         Some(exp) => _set_metadata(storage.metadata, asset, String::from_ascii_str(from_str_array(EXPIRATION_KEY)), Metadata::Int(exp)),
         None => {},

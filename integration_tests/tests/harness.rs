@@ -446,8 +446,17 @@ mod tests {
         let fixture = setup().await;
         fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
         let expiration_before = fixture.get_domain_expiration(SUB_DOMAIN_1).await.unwrap();
+        fixture.renew_domain(SUB_DOMAIN_PART_1, 2, 2 * COMMON_DEFAULT_FEE).await;
+        assert_eq!(fixture.get_domain_expiration(SUB_DOMAIN_1).await.unwrap(), expiration_before + 2 * ONE_YEAR_SECONDS);
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "ExpirationIsTooFar")]
+    async fn test_renew_expiration_too_far() {
+        let fixture = setup().await;
+        fixture.mint_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await.unwrap();
+        fixture.renew_domain(SUB_DOMAIN_PART_1, 2, 2 * COMMON_DEFAULT_FEE).await;
         fixture.renew_domain(SUB_DOMAIN_PART_1, 1, COMMON_DEFAULT_FEE).await;
-        assert_eq!(fixture.get_domain_expiration(SUB_DOMAIN_1).await.unwrap(), expiration_before + ONE_YEAR_SECONDS);
     }
 
     #[tokio::test]

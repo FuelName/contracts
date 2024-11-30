@@ -13,4 +13,5 @@ pub enum GracePeriodError {
 
 pub enum DomainRenewalError {
     CanNotRenewRootDomain: (),
+    ExpirationIsTooFar: (),
 }

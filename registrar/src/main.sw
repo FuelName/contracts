@@ -40,7 +40,8 @@ configurable {
     RESERVER_ADDRESS: b256 = 0xaebc5eac48e2d83bfaae60f9d674ac3f1e7f5dd51f1c102adfa04edda7be7e31,
 }
 
-const ONE_YEAR_SECONDS: u64 = 31622400; 
+const ONE_YEAR_SECONDS: u64 = 31622400;
+const THREE_YEARS_SECONDS: u64 = ONE_YEAR_SECONDS * 3;
 const MIN_GRACE_PERIOD_DURATION = 2592000; // 30 days
 const ROOT_DOMAIN: str[4] = __to_str_array("fuel");
 
@@ -140,10 +141,15 @@ impl DomainRegistrar for Contract {
                         0
                     }
         };
+        let new_expiration = current_expiration + (years * ONE_YEAR_SECONDS);
+        require(
+            new_expiration - timestamp() <= THREE_YEARS_SECONDS,
+            DomainRenewalError::ExpirationIsTooFar
+        );
         registry_contract.renew_domain(
             name,
             String::from_ascii_str(from_str_array(ROOT_DOMAIN)),
-            current_expiration + (years * ONE_YEAR_SECONDS)
+            new_expiration
         );
     }
 
